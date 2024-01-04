@@ -1,0 +1,111 @@
+version: "3"
+
+services:
+  owncloud:
+    image: owncloud/server:${OWNCLOUD_VERSION}
+    container_name: ${COMPOSE_PROJECT_NAME}-owncloud_server
+    restart: always
+    ports:
+      - ${HTTP_PORT}:8080
+    depends_on:
+    #   - owncloud-mariadb
+      - owncloud-redis
+    environment:
+      - OWNCLOUD_DOMAIN=${OWNCLOUD_DOMAIN}
+      - OWNCLOUD_TRUSTED_DOMAINS=${OWNCLOUD_TRUSTED_DOMAINS}
+      - OWNCLOUD_DB_TYPE=${DB_TYPE}
+    #   - OWNCLOUD_MYSQL_UTF8MB4=${DB_MYSQL_UTF8MB4}
+      - OWNCLOUD_DB_NAME=${DB_DATABASE}
+      - OWNCLOUD_DB_USERNAME=${DB_USER}
+      - OWNCLOUD_DB_PASSWORD=${DB_PASSWORD}
+      - OWNCLOUD_DB_HOST=82.180.162.37:${DB_PORT}
+      - OWNCLOUD_ADMIN_USERNAME=${ADMIN_USERNAME}
+      - OWNCLOUD_ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - OWNCLOUD_REDIS_ENABLED=true
+      - OWNCLOUD_REDIS_HOST=owncloud-redis
+      - OWNCLOUD_REDIS_PORT=${REDIS_PORT}
+    healthcheck:
+      test: ["CMD", "/usr/bin/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - files:/mnt/data
+      - ./php.ini:/etc/php/7.4/apache2/php.ini:ro
+      - ./default.conf:/etc/apache2/sites-enabled/default.conf
+    networks:
+      - owncloud
+
+#   postgres:
+#      image: postgres:latest
+#      container_name: owncloud-postgressql
+#      environment:
+#       PGDATA: /var/lib/postgresql/data/pgdata
+#       POSTGRES_DB: owncloud2
+#       POSTGRES_USER: owncloud2
+#       POSTGRES_PASSWORD: myp6A3WpHHCW
+#      volumes:
+#       - postgres_data:/var/lib/postgresql/data/pgdata
+#      restart: always
+#      networks:
+#       - owncloud
+
+#   owncloud-mariadb:
+#     image: mariadb:10.11 # minimum required ownCloud version is 10.9
+#     container_name: ${COMPOSE_PROJECT_NAME}-owncloud_mariadb
+#     restart: always
+#     ports:
+#       - ${DB_PORT}:3306
+#     environment:
+#       - MYSQL_TCP_PORT=${DB_PORT}
+#       - MYSQL_ROOT_PASSWORD=${DB_ROOTPASSWORD}
+#       - MYSQL_USER=${DB_USER}
+#       - MYSQL_PASSWORD=${DB_PASSWORD}
+#       - MYSQL_DATABASE=${DB_DATABASE}
+#       - MARIADB_AUTO_UPGRADE=1
+#     command: ["--max-allowed-packet=128M", "--innodb-log-file-size=64M"]
+#     healthcheck:
+#       test: ["CMD", "mysqladmin", "ping", "-u", "root", "--password=owncloud"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+#     volumes:
+#       - mysql:/var/lib/mysql
+#     networks:
+#       - owncloud
+
+  owncloud-redis:
+    image: redis:6
+    container_name: ${COMPOSE_PROJECT_NAME}-owncloud_redis
+    restart: always
+    ports:
+      - ${REDIS_PORT}:6379
+    command: ["--databases", "1", "--port ${REDIS_PORT}"]
+    volumes:
+      - redis:/data
+    networks:
+      - owncloud
+
+  owncloud-libreoffice:
+    image: collabora/code
+    container_name: ${COMPOSE_PROJECT_NAME}-libreoffice
+    restart: always
+    ports:
+      - ${LIBRE_PORT}:9980
+    networks:
+      - owncloud
+
+volumes:
+  files:
+    driver: local
+#   mysql:
+#     driver: local
+  redis:
+    driver: local
+#   postgres_data:
+#     driver: local
+
+networks:
+  owncloud:
+    name: owncloud
+    external: false
